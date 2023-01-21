@@ -1,3 +1,5 @@
+#Creating VM without public IP
+
 $resourceGroup = "exam-grp"
 $location = "West US 3"
 $vmName="appvm"
