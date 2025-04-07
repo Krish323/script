@@ -4,14 +4,17 @@ trigger:
 pool:
   vmImage: 'windows-latest' # Or any suitable agent pool
 
+variables:
+  myCustomVariable: "Hello from YAML" # Example of a declared variable
+
 steps:
 - task: PowerShell@2
-  displayName: 'Print Release Pipeline Info'
+  displayName: 'Print Pipeline Information'
   inputs:
     targetType: 'inline'
     script: |
       # Requires the SYSTEM_ACCESSTOKEN environment variable to be available in the pipeline.
-      # Ensure 'Allow scripts to access the OAuth token' is enabled in your agent job settings.
+      # Ensure 'Allow scripts to access the OAuth token' is enabled in your agent job settings if needed.
 
       # Organization Name
       $organizationName = ($env:SYSTEM_COLLECTIONURI -split '/')[-2]
@@ -21,35 +24,35 @@ steps:
       $projectName = $env:SYSTEM_TEAMPROJECT
       Write-Host "Project Name: $($projectName)"
 
-      # Release Number
+      # Release Number (Only available in Release Pipelines)
       if ($env:RELEASE_RELEASENUMBER) {
           $releaseNumber = $env:RELEASE_RELEASENUMBER
           Write-Host "Release Number: $($releaseNumber)"
       } else {
-          Write-Warning "Release Number environment variable (RELEASE_RELEASENUMBER) not found."
-          $releaseNumber = "N/A"
+          Write-Host "Release Number: N/A (Not available in this pipeline type)"
       }
 
-      # Variables declared in the pipeline (Example - replace with your actual variable name)
-      $yourDeclaredVariable = $env:YOUR_VARIABLE_NAME
-      if ($yourDeclaredVariable -ne $null) {
-          Write-Host "Your Declared Variable (YOUR_VARIABLE_NAME): $($yourDeclaredVariable)"
+      # Accessing a declared variable
+      $myVariableValue = $env:myCustomVariable
+      if ($myVariableValue -ne $null) {
+          Write-Host "My Custom Variable (myCustomVariable): $($myVariableValue)"
       } else {
-          Write-Warning "Your declared variable (YOUR_VARIABLE_NAME) not found."
+          Write-Warning "My custom variable (myCustomVariable) not found."
       }
 
-      # --- Optional: If you need more detailed information about the *current* release pipeline ---
-      # You would typically use the Azure DevOps REST API for this.
-      # The following is a basic example to get the definition name.
+      # --- Optional: Get Release Pipeline Name (Only in Release Pipelines) ---
+      if ($env:RELEASE_DEFINITIONID) {
+        $uri = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECT/_apis/release/definitions/$($env:RELEASE_DEFINITIONID)?api-version=7.1-preview.1"
+        $headers = @{
+            Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"
+        }
 
-      # $uri = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECT/_apis/release/definitions/$($env:RELEASE_DEFINITIONID)?api-version=7.1-preview.1"
-      # $headers = @{
-      #     Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"
-      # }
-
-      # try {
-      #     $releaseDefinition = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
-      #     Write-Host "Release Pipeline Name: $($releaseDefinition.name)"
-      # } catch {
-      #     Write-Warning "Could not retrieve Release Pipeline Name: $_"
-      # }
+        try {
+            $releaseDefinition = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+            Write-Host "Release Pipeline Name: $($releaseDefinition.name)"
+        } catch {
+            Write-Warning "Could not retrieve Release Pipeline Name: $_"
+        }
+      } else {
+        Write-Host "Release Pipeline Name: N/A (Not a Release Pipeline)"
+      }
