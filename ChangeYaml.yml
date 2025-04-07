@@ -1,0 +1,34 @@
+script: |
+          # Debug: check if the env var is set
+          Write-Host "Raw env:RELEASE_RELEASEID = $env:RELEASE_RELEASEID"
+
+          if (-not [int]::TryParse($env:RELEASE_RELEASEID, [ref]$releaseId)) {
+            Write-Error "ERROR: RELEASE_RELEASEID is not a valid integer or is missing."
+            exit 1
+          }
+
+          Write-Host "Parsed releaseId: $releaseId"
+
+          $collectionUri = "$env:SYSTEM_COLLECTIONURI"
+          $orgName = ($collectionUri -split "/")[3]
+          $project = "$env:SYSTEM_TEAMPROJECT"
+          $accessToken = "$env:SYSTEM_ACCESSTOKEN"
+
+          $projectUrl = "$collectionUri$project"
+          $uri = "$collectionUri$project/_apis/release/releases/$releaseId?api-version=7.1-preview.6"
+
+          Write-Host "Calling URI: $uri"
+
+          $headers = @{
+            Authorization = "Bearer $accessToken"
+          }
+
+          try {
+            $response = Invoke-RestMethod -Uri $uri -Headers $headers -Method Get
+
+            Write-Host "Release Name: $($response.name)"
+            Write-Host "Release ID: $($response.id)"
+          } catch {
+            Write-Error "Failed to call release API: $_"
+            exit 1
+          }
