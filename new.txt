@@ -43,7 +43,6 @@ try {
     if ($response) {
         Write-Host "Successfully updated release variable '$VariableName'."
         # Optionally, you can inspect the $response object for more details
-        # Write-Host "Full Response:"
         # Write-Host ($response | ConvertTo-Json -Depth 5)
     } else {
         Write-Warning "No response received after attempting to update the release variable."
