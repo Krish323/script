@@ -1,0 +1,56 @@
+- stage: SetPipelineVariable
+  displayName: 'Set Release Pipeline Variable Inline'
+  jobs:
+  - job: SetVariableJob
+    displayName: 'Set Variable Job'
+    pool:
+      vmImage: 'windows-latest'
+    steps:
+    - powershell: |
+        param(
+            [string]$authToken,
+            [string]$releaseId,
+            [string]$variableName,
+            [string]$variableValue,
+            [string]$collectionUri,
+            [string]$project
+        )
+
+        Write-Host "Setting release variable..."
+
+        # Construct the API URL
+        $releaseUrl = "$collectionUri$project/_apis/release/releases/$releaseId?api-version=5.0"
+
+        # Set headers for REST call
+        $headers = @{
+            Authorization = "Bearer $authToken"
+            "Content-Type" = "application/json"
+        }
+
+        # Get existing release info
+        $response = Invoke-RestMethod -Uri $releaseUrl -Headers $headers -Method Get
+        $release = $response
+
+        # Update the variable
+        if (-not $release.variables.ContainsKey($variableName)) {
+            $release.variables[$variableName] = @{ value = $variableValue }
+        } else {
+            $release.variables[$variableName].value = $variableValue
+        }
+
+        # Convert to JSON and push update
+        $body = $release | ConvertTo-Json -Depth 100
+        $putResponse = Invoke-RestMethod -Uri $releaseUrl -Headers $headers -Method Put -Body $body
+
+        Write-Host "Updated variable '$variableName' to value '$variableValue' for release $releaseId"
+
+      displayName: 'Set Variable via REST API'
+      env:
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      inputs:
+        authToken: '$(System.AccessToken)'
+        releaseId: '$(release.ReleaseId)'
+        variableName: 'CC'
+        variableValue: '$(PREDEPLOYGATE.SN.CHANGE_REQUEST_NUMBER)'
+        collectionUri: '$(System.CollectionUri)'
+        project: '$(System.TeamProject)'
