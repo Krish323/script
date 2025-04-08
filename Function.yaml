@@ -7,14 +7,12 @@
       vmImage: 'windows-latest'
     steps:
     - powershell: |
-        param(
-            [string]$authToken,
-            [string]$releaseId,
-            [string]$variableName,
-            [string]$variableValue,
-            [string]$collectionUri,
-            [string]$project
-        )
+        $authToken = "$env:SYSTEM_ACCESSTOKEN"
+        $releaseId = "$(release.ReleaseId)"
+        $variableName = "CC"
+        $variableValue = "$(PREDEPLOYGATE.SN.CHANGE_REQUEST_NUMBER)"
+        $collectionUri = "$(System.CollectionUri)"
+        $project = "$(System.TeamProject)"
 
         Write-Host "Setting release variable..."
 
@@ -43,14 +41,6 @@
         $putResponse = Invoke-RestMethod -Uri $releaseUrl -Headers $headers -Method Put -Body $body
 
         Write-Host "Updated variable '$variableName' to value '$variableValue' for release $releaseId"
-
       displayName: 'Set Variable via REST API'
       env:
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-      inputs:
-        authToken: '$(System.AccessToken)'
-        releaseId: '$(release.ReleaseId)'
-        variableName: 'CC'
-        variableValue: '$(PREDEPLOYGATE.SN.CHANGE_REQUEST_NUMBER)'
-        collectionUri: '$(System.CollectionUri)'
-        project: '$(System.TeamProject)'
