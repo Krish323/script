@@ -1,0 +1,62 @@
+param(
+    [string]$AuthToken = "$(System.AccessToken)",
+    [string]$ReleaseId = "$(release.ReleaseId)",
+    [string]$VariableName = "CC",
+    [string]$VariableValue = "$(PREDEPLOYGATE.SN.CHANGE_REQUEST_NUMBER)",
+    [string]$CollectionUri = "$(System.CollectionUri)",
+    [string]$Project = "$(System.TeamProject)"
+)
+
+Write-Host "Attempting to set release variable '$VariableName' to value '$VariableValue'..."
+Write-Host "Release ID: $ReleaseId"
+Write-Host "Project: $Project"
+Write-Host "Collection URI: $CollectionUri"
+
+# Construct the Azure DevOps REST API URL for updating release variables
+$apiUrl = "$CollectionUri$Project/_apis/release/releases/$ReleaseId?api-version=7.1"
+
+# Construct the request headers
+$headers = @{
+    "Authorization" = "Bearer $AuthToken"
+    "Content-Type" = "application/json"
+}
+
+# Construct the request body as a PowerShell hashtable, which will be converted to JSON
+$body = @{
+    variables = @{
+        "$VariableName" = @{
+            value = "$VariableValue"
+        }
+    }
+}
+
+# Convert the PowerShell hashtable to JSON
+$jsonBody = ConvertTo-Json $body -Depth 3
+
+Write-Host "Request Body (JSON):"
+Write-Host $jsonBody
+
+try {
+    # Send the PUT request to update the release
+    $response = Invoke-RestMethod -Uri $apiUrl -Method Put -Headers $headers -Body $jsonBody
+
+    if ($response) {
+        Write-Host "Successfully updated release variable '$VariableName'."
+        # Optionally, you can inspect the $response object for more details
+        # Write-Host "Full Response:"
+        # Write-Host ($response | ConvertTo-Json -Depth 5)
+    } else {
+        Write-Warning "No response received after attempting to update the release variable."
+    }
+}
+catch {
+    Write-Error "Error updating release variable '$VariableName': $($_.Exception.Message)"
+    if ($_.Exception.Response) {
+        Write-Error "Status Code: $($_.Exception.Response.StatusCode)"
+        Write-Error "Status Description: $($_.Exception.Response.StatusDescription)"
+        # Optionally, you can try to read the error content
+        # $ErrorResponse = Get-Content -Path $_.Exception.Response.GetResponseStream() -Raw
+        # Write-Error "Error Content: $ErrorResponse"
+    }
+    exit 1 # Exit with a non-zero exit code to indicate failure
+}
